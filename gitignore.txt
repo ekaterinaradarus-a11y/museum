@@ -1,0 +1,67 @@
+```gitignore
+# Файл .env с конфиденциальными данными
+.env
+.env.local
+.env.*.local
+
+# Файл с лидами (генерируется приложением)
+leads.csv
+
+# Временные файлы Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Логи и базы данных
+*.log
+*.sqlite3
+
+# IDE и редакторы
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Временные файлы операционной системы
+.DS_Store
+Thumbs.db
+
+# Установочные файлы
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Рабочие файлы разработки
+docs/_build/
+.ipynb_checkpoints
+```
