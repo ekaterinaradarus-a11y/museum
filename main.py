@@ -222,31 +222,49 @@ async def select_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    ACTIVE_DIALOG_USER_ID = int(query.data.split(":")[1])
+    # Получаем ID пользователя из callback_data
+    try:
+        ACTIVE_DIALOG_USER_ID = int(query.data.split(":")[1])
+    except (IndexError, ValueError):
+        await query.message.reply_text("❌ Ошибка: некорректные данные")
+        return
+
+    # Получаем данные пользователя из словаря
     data = ACTIVE_USERS.get(ACTIVE_DIALOG_USER_ID)
-
-    await context.bot.send_message(
-        ACTIVE_DIALOG_USER_ID,
-        "👋 К вам подключился сотрудник музея. Вы можете задать свой вопрос."
-    )
-
-    await query.message.reply_text(
-        f"✅ Активный диалог:\n"
-        f"{data.get('name')} (@{data.get('username')})\n\n"
-        "Теперь вы можете писать обычным текстом."
-    )
-
-
-async def admin_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not ACTIVE_DIALOG_USER_ID:
-        await update.message.reply_text(
-            "❗ Сначала выберите посетителя, чтобы начать диалог."
+    
+    # ✅ Проверяем, что данные существуют
+    if data is None:
+        await query.message.reply_text(
+            "❌ Информация о пользователе не найдена.\n"
+            "Возможно, бот был перезапущен или пользователь больше не активен."
         )
         return
 
-    await context.bot.send_message(
-        ACTIVE_DIALOG_USER_ID,
-        update.message.text,
+    # Безопасно получаем имя и username с значениями по умолчанию
+    name = data.get('name', 'Неизвестно')
+    username = data.get('username', 'нет username')
+    
+    try:
+        # Пробуем отправить сообщение пользователю
+        await context.bot.send_message(
+            ACTIVE_DIALOG_USER_ID,
+            "👋 К вам подключился сотрудник музея. Вы можете задать свой вопрос."
+        )
+    except Exception as e:
+        # Если не получается отправить (пользователь заблокировал бота и т.д.)
+        await query.message.reply_text(
+            f"❌ Не удалось отправить сообщение пользователю.\n"
+            f"Ошибка: {str(e)}"
+        )
+        # Сбрасываем активный диалог
+        ACTIVE_DIALOG_USER_ID = None
+        return
+
+    # Сообщаем админу об успехе
+    await query.message.reply_text(
+        f"✅ Активный диалог:\n"
+        f"{name} (@{username})\n\n"
+        "Теперь вы можете писать обычным текстом."
     )
 
 # ======================
