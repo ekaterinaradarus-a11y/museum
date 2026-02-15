@@ -121,6 +121,7 @@ async def faq_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def faq_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.lower()
+    user = update.message.from_user
 
     if text == "в меню":
         await update.message.reply_text(
@@ -129,13 +130,35 @@ async def faq_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return ConversationHandler.END
 
+    # Проверяем, есть ли ответ в FAQ
     for key, answer in FAQ_ANSWERS.items():
         if key in text:
             await update.message.reply_text(answer)
             return FAQ_MODE
 
+    # Если вопроса нет в FAQ - отправляем админу
+    # Добавляем пользователя в ACTIVE_USERS, если его там нет
+    if user.id not in ACTIVE_USERS:
+        ACTIVE_USERS[user.id] = {
+            "name": user.first_name,
+            "username": user.username,
+        }
+
+    # Отправляем вопрос админу
+    await context.bot.send_message(
+        ADMIN_CHAT_ID,
+        (
+            "❓ Вопрос от посетителя\n\n"
+            f"Имя: {ACTIVE_USERS[user.id].get('name')}\n"
+            f"Username: @{ACTIVE_USERS[user.id].get('username')}\n\n"
+            f"Вопрос:\n{update.message.text}"
+        ),
+        reply_markup=admin_users_keyboard(),
+    )
+
+    # Отвечаем пользователю
     await update.message.reply_text(
-        "Я передам ваш вопрос сотруднику музея.",
+        "Я передал ваш вопрос сотруднику музея. Ответ придет в этот чат.",
         reply_markup=main_menu(),
     )
     return ConversationHandler.END
@@ -232,7 +255,7 @@ async def select_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Получаем данные пользователя из словаря
     data = ACTIVE_USERS.get(ACTIVE_DIALOG_USER_ID)
     
-    # ✅ Проверяем, что данные существуют
+    # Проверяем, что данные существуют
     if data is None:
         await query.message.reply_text(
             "❌ Информация о пользователе не найдена.\n"
@@ -266,6 +289,32 @@ async def select_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"{name} (@{username})\n\n"
         "Теперь вы можете писать обычным текстом."
     )
+
+
+async def admin_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Отправляет сообщение от администратора текущему активному пользователю"""
+    global ACTIVE_DIALOG_USER_ID
+    
+    if not ACTIVE_DIALOG_USER_ID:
+        await update.message.reply_text(
+            "❗ Сначала выберите посетителя, чтобы начать диалог.\n"
+            "Используйте кнопки выбора пользователя."
+        )
+        return
+    
+    try:
+        await context.bot.send_message(
+            ACTIVE_DIALOG_USER_ID,
+            f"👨‍💼 Сотрудник музея:\n{update.message.text}"
+        )
+        await update.message.reply_text("✅ Сообщение отправлено")
+    except Exception as e:
+        await update.message.reply_text(f"❌ Ошибка отправки: {str(e)}")
+        # Если пользователь заблокировал бота или удалил чат
+        if "Forbidden" in str(e) or "chat not found" in str(e):
+            ACTIVE_DIALOG_USER_ID = None
+            await update.message.reply_text("⚠️ Пользователь больше недоступен. Диалог сброшен.")
+
 
 # ======================
 # MAIN
